@@ -23,7 +23,7 @@ typedef struct thread_arguments{
     int type;
     FILE *input_file;
     Vector* power_arr;
-    int **power_table;
+    Vector* power_table;
     int *nr_mapper;
     int *nr_reducer;
     char* input_file_name;
@@ -33,6 +33,6 @@ typedef struct thread_arguments{
 }Thread_arguments;
 
 void *f(void* threads_arg);
-void get_index_from_power_table(int **power_table, int nr_reducer, int number, Vector *res);
+void get_index_from_power_table(Vector* power_table, int nr_reducer, int number, Vector *res);
 
 #endif

@@ -1,6 +1,26 @@
 #include "thread_arguments.h"
 
-void get_index_from_power_table(int **power_table, int nr_reducer, int number, Vector *res){
+int binarySearch(int *vec, int to_find, int vec_size){
+    int low = 0;
+    int high = vec_size - 1;
+    while(high - low > 1){
+        int mid = (high / 2) + (low / 2);
+        if(vec[mid] < to_find){
+            low = mid + 1;
+        }else{
+            high = mid;
+        }
+    }
+    if(vec[low] == to_find){
+        return low;
+    }
+    if(vec[high] == to_find){
+        return high;
+    }
+    return -1;
+}
+
+void get_index_from_power_table(Vector* power_table, int nr_reducer, int number, Vector *res){
     if(number == 1){
         for(int i = 0; i < nr_reducer; i++){
             res[i].vec = realloc(res[i].vec,(++res[i].size) * sizeof(int));
@@ -12,18 +32,10 @@ void get_index_from_power_table(int **power_table, int nr_reducer, int number, V
         }
     }
     for(int i = 0; i < nr_reducer; i++){
-        int j = 0;
-        while(power_table[i][j] != -1 && power_table[i][j] <= number){
-            if(power_table[i][j] == number){
-                res[i].vec = realloc(res[i].vec,(++res[i].size) * sizeof(int));
-                if(!res[i].vec){
-                    printf("Error: Out of memory\r\n");
-                    exit(-1);
-                }
-                res[i].vec[res[i].size - 1] = number;
-                break;
-            }
-            j++;
+        int aux = binarySearch(power_table[i].vec,number,power_table[i].size);
+        if(aux != -1){
+            res[i].vec = realloc(res[i].vec,(++res[i].size) * sizeof(int));
+            res[i].vec[res[i].size - 1] = number;
         }
     }
 }
