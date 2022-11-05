@@ -44,7 +44,7 @@ void return_power_table(int ***power_table, int nr_reducer){
 void power_table_destroy(int ***power_table, int nr_reducer){
     for(int i = 0; i < nr_reducer; i++){
         free((*power_table)[i]);
-        (*power_table)[i] = NULL;
+        // (*power_table)[i] = NULL;
     }
     free(*power_table);
     *power_table = NULL;
@@ -53,27 +53,32 @@ void power_table_destroy(int ***power_table, int nr_reducer){
 
 int main(int argc, char **argv){
 
-    int *nr_mapper = (int*)malloc(sizeof(int));
+    int *nr_mapper = (int*)calloc(1,sizeof(int));
     if(!nr_mapper){
         printf("Error: Out of memory\r\n");
         exit(-1);
     }
     *nr_mapper = atoi(argv[1]);
 
-    int *nr_reducer = (int*)malloc(sizeof(int));
+    int *nr_reducer = (int*)calloc(1,sizeof(int));
     if(!nr_reducer){
         printf("Error: Out of memory\r\n");
         exit(-1);
     }
     *nr_reducer = atoi(argv[2]);
 
-    char* input_files_name = (char*)malloc(MAX_INPUT_FILE_NAME * sizeof(char));
+    char* input_files_name = (char*)calloc(MAX_INPUT_FILE_NAME , sizeof(char));
     if(!input_files_name){
         printf("Error: Out of memory\r\n");
         exit(-1);
     }
     strcpy(input_files_name, argv[3]);
     FILE* input_file = fopen(input_files_name,"r");
+
+    char *buffer = calloc(MAX_INPUT_FILE_NAME , sizeof(int));
+    fscanf(input_file,"%s",buffer);
+    free(buffer);
+    
     if(!input_file){
         printf("Error: Can't open file\r\n");
         exit(-1);
@@ -101,7 +106,7 @@ int main(int argc, char **argv){
         exit(-1);
     }
 
-    Thread_arguments* threads_arg = (Thread_arguments*)malloc(cores * sizeof(Thread_arguments));
+    Thread_arguments* threads_arg = (Thread_arguments*)calloc(cores , sizeof(Thread_arguments));
     if(!threads_arg){
         printf("Error: Out of memory\r\n");
         exit(-1);
@@ -118,8 +123,16 @@ int main(int argc, char **argv){
         threads_arg[i].nr_mapper = nr_mapper;
         threads_arg[i].nr_reducer = nr_reducer;
         threads_arg[i].power_table = power_table;
-        threads_arg[i].power_arr = (int**)malloc((*nr_reducer) * sizeof(int*));
+        //TODO:check malloc
         threads_arg[i].mutex = &mutex;
+        threads_arg[i].barrier = &barrier;
+        threads_arg[i].threads_arg = threads_arg;
+        threads_arg[i].input_file_name = calloc(MAX_INPUT_FILE_NAME , sizeof(char));
+        if(!threads_arg[i].input_file_name){
+            printf("Error: Out of memory\r\n");
+            exit(-1);
+        }
+        //TODO:check malloc
         r = pthread_create(&threads[i],NULL,f,&threads_arg[i]);
         if (r) {
 		    printf("Eroare la crearea thread-ului %d\n", i);
@@ -139,7 +152,7 @@ int main(int argc, char **argv){
     free(nr_reducer);
     free(input_files_name);
     free(threads_arg);
-    power_table_destroy(&power_table, *nr_reducer);
+    //power_table_destroy(&power_table, *nr_reducer);
 
     fclose(input_file);
     pthread_mutex_destroy(&mutex);

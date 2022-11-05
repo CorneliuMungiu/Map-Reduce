@@ -9,7 +9,7 @@
 #include <pthread.h>
 #include <unistd.h>
 
-#define MAX_INPUT_FILE_NAME 30
+#define MAX_INPUT_FILE_NAME 255
 #define MAPPER 0
 #define REDUCER 1
 
@@ -29,6 +29,7 @@ typedef struct thread_arguments{
     char* input_file_name;
     pthread_mutex_t *mutex;
     pthread_barrier_t *barrier;
+    struct thread_arguments* threads_arg;
 }Thread_arguments;
 
 void *f(void* threads_arg);

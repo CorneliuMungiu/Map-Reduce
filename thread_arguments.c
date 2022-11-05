@@ -13,7 +13,7 @@ void get_index_from_power_table(int **power_table, int nr_reducer, int number, V
     }
     for(int i = 0; i < nr_reducer; i++){
         int j = 0;
-        while(j != -1 && power_table[i][j] <= number){
+        while(power_table[i][j] != -1 && power_table[i][j] <= number){
             if(power_table[i][j] == number){
                 res[i].vec = realloc(res[i].vec,(++res[i].size) * sizeof(int));
                 if(!res[i].vec){
@@ -62,34 +62,33 @@ void *mapper(void* threads_arg){
     for(int i = 0; i < nr_of_rows; i++){
         fscanf(input_file,"%s",buffer);
         aux = atoi(buffer);
-        printf("thread %d file %s\n", thread_arg->id, thread_arg->input_file_name);
         get_index_from_power_table(thread_arg->power_table, *(thread_arg->nr_reducer), aux, vec_aux);
     }
 
     if(thread_arg->power_arr == NULL){
         thread_arg->power_arr = vec_aux;
-
-        // printf("%s\n",thread_arg->input_file_name);
-        // for(int j = 0; j < *thread_arg->nr_reducer; j++){
-        //     for(int k = 0; k < thread_arg->power_arr[j].size; k++){
-        //         printf("%d ",thread_arg->power_arr[j].vec[k]);
-        //     }
-        //     printf("\n");
-        // }
     }else{
         merge_Vector(thread_arg->power_arr,vec_aux,*thread_arg->nr_reducer);
-        // for(int j = 0; j < *thread_arg->nr_reducer; j++){
-        //     for(int k = 0; k < thread_arg->power_arr[j].size; k++){
-        //         printf("%d ",thread_arg->power_arr[j].vec[k]);
-        //     }
-        //     printf("\n");
-        // }
     }
-    //printf("A citit fisierul %s\n",thread_arg->input_file_name);
     free(buffer);
     fclose(input_file);
     return NULL;
 
+}
+
+void add_elem_in_list(Vector *vec, int number){
+    if(vec->vec == NULL){
+        vec->vec = calloc(1,sizeof(int));
+        vec->vec[0] = number;
+        vec->size = 1;
+        return;
+    }
+    for(int i = 0; i < vec->size; i++){
+        if(number == vec->vec[i])
+            return;
+    }
+    vec->vec = realloc(vec->vec,(++vec->size) * sizeof(int));
+    vec->vec[vec->size - 1] = number;
 }
 
 
@@ -118,7 +117,23 @@ void *f(void* threads_arg){
     }
     pthread_barrier_wait(thread_arg->barrier);
     if(thread_arg->type == REDUCER){
-        
+        int power = thread_arg->id - *thread_arg->nr_mapper;
+        Vector aux;
+        for(int i = 0; i < *thread_arg->nr_mapper; i++){
+            if(thread_arg->threads_arg[i].power_arr == NULL)
+                continue;
+            for(int j = 0; j < thread_arg->threads_arg[i].power_arr[power].size; j++){
+                add_elem_in_list(&aux,thread_arg->threads_arg[i].power_arr[power].vec[j]);
+            }
+        }
+        //TODO: Remove printf
+        printf("\nREZULTAT power %d = %d\n",power+2,aux.size);
+        char *file_name = calloc(MAX_INPUT_FILE_NAME,sizeof(char));
+        sprintf(file_name,"out%d.txt",power + 2);
+        FILE *file = fopen(file_name,"w");
+        fprintf(file,"%d",aux.size);
+        free(file_name);
+        fclose(file);
     }
     return NULL;
 }
