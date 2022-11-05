@@ -10,35 +10,25 @@ int power(int number, int power){
     return (int)res;
 }
 
-void return_power_table(int ***power_table, int nr_reducer){
-
-    *power_table = (int**)malloc(nr_reducer * sizeof(int*));
-    if(!(*power_table)){
-        printf("Error: Out of memory\r\n");
-        exit(-1);
+Vector* return_power_table(int nr_reducer){
+    Vector *res = calloc(nr_reducer,sizeof(Vector));
+    for(int i = 0; i < nr_reducer; i++){
+        res[i].size = 0;
     }
-
+    int tmp = 0;
     for(int i = 0; i < nr_reducer; i++){
         int number = 2;
         int tmp = 0;
-        int vec_size = 1;
-        do{
-            tmp = power(number, i + 2);
-            (*power_table)[i] = realloc((*power_table)[i],sizeof(int) * (vec_size++));
-            if(!(*power_table)[i]){
-                printf("Error: Out of memory\r\n");
-                exit(-1);
-            }
-            (*power_table)[i][number - 2] = tmp;
+        while(1){
+            tmp = power(number,i + 2);
+            if(tmp == -1)
+                break;
+            res[i].vec = realloc(res[i].vec,sizeof(int) * (++res[i].size));
+            res[i].vec[res[i].size - 1] = tmp;
             number++;
-        }while(tmp != -1);
-        (*power_table)[i] = realloc((*power_table)[i],sizeof(int) * (vec_size));
-        if(!(*power_table)[i]){
-                printf("Error: Out of memory\r\n");
-                exit(-1);
         }
-        (*power_table)[i][number - 2] = -1;
     }
+    return res;
 }
 
 void power_table_destroy(int ***power_table, int nr_reducer){
@@ -84,8 +74,7 @@ int main(int argc, char **argv){
         exit(-1);
     }
 
-    int **power_table;
-    return_power_table(&power_table, *nr_reducer);
+    Vector *power_table = return_power_table(*nr_reducer);
 
     long cores = (*nr_mapper) + (*nr_reducer);
     pthread_t threads[cores];
@@ -123,7 +112,6 @@ int main(int argc, char **argv){
         threads_arg[i].nr_mapper = nr_mapper;
         threads_arg[i].nr_reducer = nr_reducer;
         threads_arg[i].power_table = power_table;
-        //TODO:check malloc
         threads_arg[i].mutex = &mutex;
         threads_arg[i].barrier = &barrier;
         threads_arg[i].threads_arg = threads_arg;
@@ -132,7 +120,6 @@ int main(int argc, char **argv){
             printf("Error: Out of memory\r\n");
             exit(-1);
         }
-        //TODO:check malloc
         r = pthread_create(&threads[i],NULL,f,&threads_arg[i]);
         if (r) {
 		    printf("Eroare la crearea thread-ului %d\n", i);
@@ -152,7 +139,6 @@ int main(int argc, char **argv){
     free(nr_reducer);
     free(input_files_name);
     free(threads_arg);
-    //power_table_destroy(&power_table, *nr_reducer);
 
     fclose(input_file);
     pthread_mutex_destroy(&mutex);
