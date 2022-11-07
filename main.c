@@ -1,78 +1,25 @@
-#include "thread_arguments.h"
-
-int power(int number, int power){
-    long res = 1;
-    for(int i = 0; i < power; i++){
-        res *= number;
-        if(res > INT_MAX)
-            return -1;
-    }
-    return (int)res;
-}
-
-Vector* return_power_table(int nr_reducer){
-    Vector *res = calloc(nr_reducer,sizeof(Vector));
-    for(int i = 0; i < nr_reducer; i++){
-        res[i].size = 0;
-    }
-    int tmp = 0;
-    for(int i = 0; i < nr_reducer; i++){
-        int number = 2;
-        int tmp = 0;
-        while(1){
-            tmp = power(number,i + 2);
-            if(tmp == -1)
-                break;
-            res[i].vec = realloc(res[i].vec,sizeof(int) * (++res[i].size));
-            res[i].vec[res[i].size - 1] = tmp;
-            number++;
-        }
-    }
-    return res;
-}
-
-void power_table_destroy(int ***power_table, int nr_reducer){
-    for(int i = 0; i < nr_reducer; i++){
-        free((*power_table)[i]);
-        // (*power_table)[i] = NULL;
-    }
-    free(*power_table);
-    *power_table = NULL;
-}
-
+#include "utils.h"
 
 int main(int argc, char **argv){
 
     int *nr_mapper = (int*)calloc(1,sizeof(int));
-    if(!nr_mapper){
-        printf("Error: Out of memory\r\n");
-        exit(-1);
-    }
+    check_alloc(nr_mapper);
     *nr_mapper = atoi(argv[1]);
 
     int *nr_reducer = (int*)calloc(1,sizeof(int));
-    if(!nr_reducer){
-        printf("Error: Out of memory\r\n");
-        exit(-1);
-    }
+    check_alloc(nr_reducer);
     *nr_reducer = atoi(argv[2]);
 
     char* input_files_name = (char*)calloc(MAX_INPUT_FILE_NAME , sizeof(char));
-    if(!input_files_name){
-        printf("Error: Out of memory\r\n");
-        exit(-1);
-    }
+    check_alloc(input_files_name);
     strcpy(input_files_name, argv[3]);
     FILE* input_file = fopen(input_files_name,"r");
 
     char *buffer = calloc(MAX_INPUT_FILE_NAME , sizeof(int));
+    check_alloc(buffer);
     fscanf(input_file,"%s",buffer);
     free(buffer);
-    
-    if(!input_file){
-        printf("Error: Can't open file\r\n");
-        exit(-1);
-    }
+    check_alloc(input_file);
 
     Vector *power_table = return_power_table(*nr_reducer);
 
@@ -96,10 +43,7 @@ int main(int argc, char **argv){
     }
 
     Thread_arguments* threads_arg = (Thread_arguments*)calloc(cores , sizeof(Thread_arguments));
-    if(!threads_arg){
-        printf("Error: Out of memory\r\n");
-        exit(-1);
-    }
+    check_alloc(threads_arg);
 
     for(int i = 0; i < cores; i++){
         threads_arg[i].id = i;
@@ -116,13 +60,10 @@ int main(int argc, char **argv){
         threads_arg[i].barrier = &barrier;
         threads_arg[i].threads_arg = threads_arg;
         threads_arg[i].input_file_name = calloc(MAX_INPUT_FILE_NAME , sizeof(char));
-        if(!threads_arg[i].input_file_name){
-            printf("Error: Out of memory\r\n");
-            exit(-1);
-        }
-        r = pthread_create(&threads[i],NULL,f,&threads_arg[i]);
+        check_alloc(threads_arg[i].input_file_name);
+        r = pthread_create(&threads[i],NULL,thread_distribution,&threads_arg[i]);
         if (r) {
-		    printf("Eroare la crearea thread-ului %d\n", i);
+		    printf("Error creating thread %d\n", i);
 		    exit(-1);
 	    }
     }
@@ -130,15 +71,17 @@ int main(int argc, char **argv){
     for(int i = 0; i < cores; i++){
         r = pthread_join(threads[i],&status);
         if (r) {
-	  		printf("Eroare la asteptarea thread-ului %d\n", i);
+	  		printf("Error waiting for thread %d\n", i);
 	  		exit(-1);
 		}
     }
 
+    vector_destroy(power_table,*nr_reducer);
+    thread_arguments_destroy(threads_arg,cores);
+
     free(nr_mapper);
     free(nr_reducer);
     free(input_files_name);
-    free(threads_arg);
 
     fclose(input_file);
     pthread_mutex_destroy(&mutex);
